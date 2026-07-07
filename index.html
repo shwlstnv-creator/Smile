@@ -355,14 +355,14 @@ function tierFor(pct){
 // model output, which you generally shouldn't need to touch.
 const CURVE = [
   { r: 0.00, d: 0 },
-  { r: 0.30, d: 15 },
-  { r: 0.50, d: 32 },
-  { r: 0.65, d: 48 },
-  { r: 0.78, d: 62 },
-  { r: 0.87, d: 75 },
-  { r: 0.93, d: 85 },
-  { r: 0.97, d: 92 },
-  { r: 0.99, d: 97 },
+  { r: 0.30, d: 28 },
+  { r: 0.50, d: 45 },
+  { r: 0.65, d: 58 },
+  { r: 0.78, d: 70 },
+  { r: 0.87, d: 80 },
+  { r: 0.93, d: 88 },
+  { r: 0.97, d: 94 },
+  { r: 0.99, d: 98 },
   { r: 1.00, d: 100 },
 ];
 
@@ -419,13 +419,13 @@ function computeIntensity(happy, landmarks){
   const widthRatio = mouthWidth / (faceWidth || 1);
   const openRatio = mouthOpen / (faceHeight || 1);
 
-  const widthScore = clamp01((widthRatio - 0.40) / (0.62 - 0.40));
-  const openScore = clamp01((openRatio - 0.02) / (0.20 - 0.02));
-  const geometry = 0.55 * widthScore + 0.45 * openScore;
+  const widthScore = clamp01((widthRatio - 0.37) / (0.58 - 0.37));
+  const openScore = clamp01((openRatio - 0.015) / (0.16 - 0.015));
+  const geometry = 0.5 * widthScore + 0.5 * openScore;
 
-  // "happy" alone can only ever earn about half credit; the other half
-  // requires the geometry (a real wide, open expression) to back it up.
-  return happy * (0.45 + 0.55 * geometry);
+  // "happy" confidence now carries more of the weight, with geometry
+  // still needed to push into the top of the range.
+  return happy * (0.55 + 0.45 * geometry);
 }
 
 async function startCamera(){
