@@ -355,14 +355,14 @@ function tierFor(pct){
 // model output, which you generally shouldn't need to touch.
 const CURVE = [
   { r: 0.00, d: 0 },
-  { r: 0.40, d: 12 },
-  { r: 0.65, d: 30 },
-  { r: 0.80, d: 50 },
-  { r: 0.90, d: 68 },
-  { r: 0.95, d: 80 },
-  { r: 0.975, d: 88 },
-  { r: 0.99, d: 94 },
-  { r: 0.997, d: 97 },
+  { r: 0.30, d: 15 },
+  { r: 0.50, d: 32 },
+  { r: 0.65, d: 48 },
+  { r: 0.78, d: 62 },
+  { r: 0.87, d: 75 },
+  { r: 0.93, d: 85 },
+  { r: 0.97, d: 92 },
+  { r: 0.99, d: 97 },
   { r: 1.00, d: 100 },
 ];
 
@@ -396,7 +396,36 @@ function renderGauge(displayPct){
 async function loadModels(){
   await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
   await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
+  await faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL);
   modelsReady = true;
+}
+
+function dist(a, b){ return Math.hypot(a.x - b.x, a.y - b.y); }
+function clamp01(v){ return Math.max(0, Math.min(1, v)); }
+
+// Combines the classifier's "happy" confidence with actual mouth geometry
+// (how wide + how open the mouth is, relative to the face). A relaxed,
+// closed-mouth smile can score high on "happy" alone, so geometry is what
+// forces a genuinely big, wide-open expression to reach the top of the
+// scale. Tune the 0.40/0.62 and 0.02/0.20 ranges below after live testing —
+// raise the lower bound to make it harder to get geometry credit at all.
+function computeIntensity(happy, landmarks){
+  const pts = landmarks;
+  const faceWidth = dist(pts[0], pts[16]);
+  const faceHeight = dist(pts[27], pts[8]);
+  const mouthWidth = dist(pts[48], pts[54]);
+  const mouthOpen = dist(pts[51], pts[57]);
+
+  const widthRatio = mouthWidth / (faceWidth || 1);
+  const openRatio = mouthOpen / (faceHeight || 1);
+
+  const widthScore = clamp01((widthRatio - 0.40) / (0.62 - 0.40));
+  const openScore = clamp01((openRatio - 0.02) / (0.20 - 0.02));
+  const geometry = 0.55 * widthScore + 0.45 * openScore;
+
+  // "happy" alone can only ever earn about half credit; the other half
+  // requires the geometry (a real wide, open expression) to back it up.
+  return happy * (0.45 + 0.55 * geometry);
 }
 
 async function startCamera(){
@@ -481,10 +510,13 @@ async function detectLoop(){
   const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
   async function tick(){
     try{
-      const result = await faceapi.detectSingleFace(video, options).withFaceExpressions();
-      if (result && result.expressions){
+      const result = await faceapi.detectSingleFace(video, options)
+        .withFaceLandmarks(true)
+        .withFaceExpressions();
+      if (result && result.expressions && result.landmarks){
         const happy = result.expressions.happy || 0;
-        const target = happy * 100;
+        const intensity = computeIntensity(happy, result.landmarks.positions);
+        const target = intensity * 100;
         rawSmoothed = rawSmoothed + (target - rawSmoothed) * 0.3;
       } else {
         rawSmoothed = rawSmoothed * 0.9;
