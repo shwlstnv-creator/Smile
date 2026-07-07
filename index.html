@@ -423,9 +423,9 @@ function computeIntensity(happy, landmarks){
   const openScore = clamp01((openRatio - 0.015) / (0.16 - 0.015));
   const geometry = 0.5 * widthScore + 0.5 * openScore;
 
-  // "happy" confidence now carries more of the weight, with geometry
-  // still needed to push into the top of the range.
-  return happy * (0.55 + 0.45 * geometry);
+  // "happy" confidence now does almost all of the work, with mouth
+  // geometry only adding a modest bonus on top.
+  return happy * (0.78 + 0.22 * geometry);
 }
 
 async function startCamera(){
