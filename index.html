@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>청년한신 · 웃음 지수 측정기</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  :root{
+    --navy: #12142B;
+    --navy-deep: #0A0B1C;
+    --dawn-gold: #F6B93B;
+    --dawn-coral: #FF7A59;
+    --mist: #C9CBE0;
+    --paper: #FDF8EE;
+  }
+  *{ box-sizing: border-box; margin:0; padding:0; }
+  html,body{ height:100%; overscroll-behavior:none; }
+  body{
+    font-family: 'Pretendard', -apple-system, sans-serif;
+    background: radial-gradient(120% 90% at 50% -10%, #262A52 0%, var(--navy) 45%, var(--navy-deep) 100%);
+    color: var(--paper);
+    min-height: 100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    padding: 28px 20px 36px;
+    overflow-x:hidden;
+  }
+
+  .eyebrow{
+    font-size: 13px;
+    letter-spacing: 0.28em;
+    color: var(--dawn-gold);
+    font-weight:600;
+    text-transform:uppercase;
+  }
+  h1{
+    font-size: clamp(22px, 5vw, 30px);
+    font-weight: 800;
+    margin-top: 6px;
+    letter-spacing: -0.01em;
+  }
+  .sub{
+    margin-top: 6px;
+    font-size: 14px;
+    color: var(--mist);
+  }
+
+  .stage{
+    position: relative;
+    margin-top: 26px;
+    width: min(84vw, 380px);
+    aspect-ratio: 3/4;
+    border-radius: 32px;
+    overflow: hidden;
+    background: #000;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 30px 60px -20px rgba(0,0,0,0.6);
+  }
+  video{
+    width:100%; height:100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+  }
+  .veil{
+    position:absolute; inset:0;
+    background: linear-gradient(180deg, rgba(10,11,28,0) 60%, rgba(10,11,28,0.85) 100%);
+    pointer-events:none;
+  }
+  .hint{
+    position:absolute; left:0; right:0; bottom:14px;
+    text-align:center;
+    font-size: 15px;
+    font-weight:600;
+    color: var(--paper);
+    opacity:0.9;
+    letter-spacing: -0.01em;
+  }
+  .status-dot{
+    position:absolute; top:14px; left:14px;
+    width:9px; height:9px; border-radius:50%;
+    background: #666;
+    box-shadow: 0 0 0 0 rgba(246,185,59,0.6);
+  }
+  .status-dot.live{
+    background: var(--dawn-gold);
+    animation: pulse 1.6s infinite;
+  }
+  @keyframes pulse{
+    0%{ box-shadow: 0 0 0 0 rgba(246,185,59,0.55); }
+    70%{ box-shadow: 0 0 0 10px rgba(246,185,59,0); }
+    100%{ box-shadow: 0 0 0 0 rgba(246,185,59,0); }
+  }
+  .best{
+    position:absolute; top:12px; right:14px;
+    font-size: 12px;
+    font-weight:700;
+    color: var(--navy-deep);
+    background: var(--paper);
+    padding: 5px 10px;
+    border-radius: 999px;
+    opacity: 0.92;
+  }
+
+  .start-overlay{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap: 14px;
+    background: rgba(10,11,28,0.35);
+  }
+  #startBtn{
+    background: var(--dawn-gold);
+    color: var(--navy-deep);
+    border:none;
+    font-weight:800;
+    font-size: 18px;
+    padding: 16px 36px;
+    border-radius: 999px;
+    cursor:pointer;
+    box-shadow: 0 10px 30px -8px rgba(246,185,59,0.6);
+  }
+  .start-tip{
+    font-size: 13px;
+    color: var(--paper);
+    opacity: 0.85;
+  }
+
+  .countdown-overlay{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    background: rgba(10,11,28,0.2);
+    pointer-events:none;
+  }
+  .countdown-num{
+    font-size: 120px;
+    font-weight: 800;
+    color: var(--paper);
+    text-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    animation: pop 0.35s ease;
+  }
+  @keyframes pop{
+    0%{ transform: scale(0.6); opacity:0; }
+    100%{ transform: scale(1); opacity:1; }
+  }
+
+  .retry-measure{
+    margin-top: 18px;
+    background: transparent;
+    border: 1.5px solid rgba(253,248,238,0.5);
+    color: var(--paper);
+    font-weight:700;
+    font-size: 14px;
+    padding: 10px 22px;
+    border-radius: 999px;
+    cursor:pointer;
+  }
+
+  /* Sunrise gauge */
+  .gauge-wrap{
+    margin-top: 30px;
+    width: min(84vw, 380px);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  svg{ width:100%; height:auto; overflow:visible; }
+  .score-num{
+    font-size: clamp(40px, 11vw, 56px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-top: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .score-num sup{ font-size: 0.4em; margin-left: 2px; color: var(--mist); font-weight:700; }
+
+  .grade{
+    margin-top: 10px;
+    font-size: clamp(17px, 4.4vw, 20px);
+    font-weight: 700;
+    text-align:center;
+    min-height: 28px;
+    transition: color 0.3s ease;
+  }
+  .grade-sub{
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--mist);
+    text-align:center;
+  }
+
+  .permission{
+    margin-top: 40px;
+    max-width: 320px;
+    text-align:center;
+    font-size: 14px;
+    line-height:1.6;
+    color: var(--mist);
+  }
+  .permission button{
+    margin-top: 16px;
+    background: var(--dawn-gold);
+    color: var(--navy-deep);
+    border:none;
+    font-weight:700;
+    font-size:15px;
+    padding: 12px 24px;
+    border-radius: 999px;
+    cursor:pointer;
+  }
+  footer{
+    margin-top: auto;
+    padding-top: 30px;
+    font-size: 12px;
+    color: rgba(201,203,224,0.55);
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+
+  <div class="eyebrow">청년한신 · 예배 전 아이스브레이커</div>
+  <h1>웃음 지수 측정기</h1>
+  <div class="sub">화면에 얼굴을 비추고, 활짝 웃어보세요</div>
+
+  <div class="stage" id="stage">
+    <video id="video" autoplay playsinline muted></video>
+    <div class="veil"></div>
+    <div class="status-dot" id="statusDot"></div>
+    <div class="best" id="bestBadge" style="display:none">오늘 최고 <span id="bestVal">0</span>%</div>
+    <div class="hint" id="hint">카메라를 켜는 중...</div>
+
+    <div class="start-overlay" id="startOverlay" style="display:none">
+      <button id="startBtn">측정 시작</button>
+      <div class="start-tip">버튼을 누르면 5초 후 표정이 찍혀요</div>
+    </div>
+
+    <div class="countdown-overlay" id="countdownOverlay" style="display:none">
+      <div class="countdown-num" id="countdownNum">5</div>
+    </div>
+  </div>
+
+  <div class="permission" id="permBox" style="display:none">
+    이 화면은 카메라 접근이 필요해요.<br>브라우저에서 카메라 권한을 허용해주세요.
+    <br><button id="retryBtn">다시 시도</button>
+  </div>
+
+  <div class="gauge-wrap" id="gaugeWrap" style="display:none">
+    <svg viewBox="0 0 300 170" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="sunGrad" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0%" stop-color="#5C6BC0"/>
+          <stop offset="45%" stop-color="#F6B93B"/>
+          <stop offset="100%" stop-color="#FF7A59"/>
+        </linearGradient>
+      </defs>
+      <path d="M 20 160 A 130 130 0 0 1 280 160" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="16" stroke-linecap="round"/>
+      <path id="arc" d="M 20 160 A 130 130 0 0 1 280 160" fill="none" stroke="url(#sunGrad)" stroke-width="16" stroke-linecap="round"
+            stroke-dasharray="408.4" stroke-dashoffset="408.4"/>
+      <circle id="sun" cx="20" cy="160" r="10" fill="#FDF8EE"/>
+    </svg>
+    <div class="score-num"><span id="scoreVal">0</span><sup>%</sup></div>
+    <div class="grade" id="gradeText">측정 시작 버튼을 눌러주세요</div>
+    <div class="grade-sub" id="gradeSub">&nbsp;</div>
+    <button class="retry-measure" id="retryMeasureBtn" style="display:none">다시 측정하기</button>
+  </div>
+
+  <footer>예배 시작 전, 웃으며 함께 준비해요 🙂</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script>
+const MODEL_URL = "https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights";
+
+const video = document.getElementById('video');
+const hint = document.getElementById('hint');
+const statusDot = document.getElementById('statusDot');
+const permBox = document.getElementById('permBox');
+const gaugeWrap = document.getElementById('gaugeWrap');
+const arc = document.getElementById('arc');
+const sun = document.getElementById('sun');
+const scoreVal = document.getElementById('scoreVal');
+const gradeText = document.getElementById('gradeText');
+const gradeSub = document.getElementById('gradeSub');
+const bestBadge = document.getElementById('bestBadge');
+const bestVal = document.getElementById('bestVal');
+const startOverlay = document.getElementById('startOverlay');
+const startBtn = document.getElementById('startBtn');
+const countdownOverlay = document.getElementById('countdownOverlay');
+const countdownNum = document.getElementById('countdownNum');
+const retryMeasureBtn = document.getElementById('retryMeasureBtn');
+
+const ARC_LEN = 408.4; // path length for the semicircle
+let rawSmoothed = 0;   // smoothed raw "happy" 0-100 straight from the model
+let best = 0;
+let modelsReady = false;
+let phase = 'idle';    // 'idle' | 'ready' | 'counting' | 'result'
+
+const grades = [
+  { min: 0,  title: "아직 커피가 덜 깼나봐요 ☕", sub: "표정 근육 스트레칭 한 번 하고 다시!" },
+  { min: 15, title: "살짝 미소, 몸풀기 완료 🙂", sub: "조금만 더 힘내볼까요" },
+  { min: 35, title: "훈훈한 미소, 좋아요! 😊", sub: "예배 예열 순조롭게 진행중" },
+  { min: 55, title: "함박웃음 발사! 은혜충만 예열중 😄", sub: "옆 사람한테도 한 번 웃어주세요" },
+  { min: 75, title: "폭소 지수 최고! 🤣", sub: "오늘 예배 완전 기대되는데요?" },
+  { min: 90, title: "웃음 만렙, 오늘의 해가 떴습니다 🌅", sub: "이 텐션 그대로 예배까지 가봅시다" },
+];
+
+function gradeFor(pct){
+  let g = grades[0];
+  for (const item of grades){ if (pct >= item.min) g = item; }
+  return g;
+}
+
+// Raw model "happy" scores hit 80-90+ very easily with just a light smile,
+// so we bend the curve: only a strong, sustained smile gets close to 100.
+function toDisplayScore(rawPct){
+  const ratio = Math.max(0, Math.min(1, rawPct / 100));
+  return Math.pow(ratio, 2.4) * 100;
+}
+
+function renderGauge(displayPct){
+  const clamped = Math.max(0, Math.min(100, displayPct));
+  const offset = ARC_LEN - (ARC_LEN * clamped / 100);
+  arc.style.strokeDashoffset = offset;
+
+  const angle = Math.PI * (1 - clamped/100); // 180deg -> 0deg
+  const cx = 150 + 130 * Math.cos(angle);
+  const cy = 160 - 130 * Math.sin(angle);
+  sun.setAttribute('cx', cx);
+  sun.setAttribute('cy', cy);
+
+  scoreVal.textContent = Math.round(clamped);
+  return clamped;
+}
+
+async function loadModels(){
+  await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+  await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
+  modelsReady = true;
+}
+
+async function startCamera(){
+  permBox.style.display = 'none';
+  hint.textContent = "카메라를 켜는 중...";
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio:false });
+    video.srcObject = stream;
+    await video.play();
+    hint.textContent = "";
+    statusDot.classList.add('live');
+    gaugeWrap.style.display = 'flex';
+    if (!modelsReady) await loadModels();
+    detectLoop();
+    goToReady();
+  }catch(err){
+    permBox.style.display = 'block';
+    hint.textContent = "카메라 권한이 필요해요";
+  }
+}
+
+function goToReady(){
+  phase = 'ready';
+  startOverlay.style.display = 'flex';
+  countdownOverlay.style.display = 'none';
+  retryMeasureBtn.style.display = 'none';
+  renderGauge(0);
+  gradeText.textContent = "측정 시작 버튼을 눌러주세요";
+  gradeSub.textContent = "\u00a0";
+}
+
+function startCountdown(){
+  phase = 'counting';
+  startOverlay.style.display = 'none';
+  countdownOverlay.style.display = 'flex';
+  let n = 5;
+  countdownNum.textContent = n;
+  countdownNum.style.animation = 'none';
+  void countdownNum.offsetWidth;
+  countdownNum.style.animation = '';
+
+  const timer = setInterval(() => {
+    n -= 1;
+    if (n > 0){
+      countdownNum.textContent = n;
+      countdownNum.style.animation = 'none';
+      void countdownNum.offsetWidth;
+      countdownNum.style.animation = '';
+    } else {
+      clearInterval(timer);
+      captureResult();
+    }
+  }, 1000);
+}
+
+function captureResult(){
+  phase = 'result';
+  countdownOverlay.style.display = 'none';
+
+  const finalDisplay = toDisplayScore(rawSmoothed);
+  const clamped = renderGauge(finalDisplay);
+
+  if (clamped > best){
+    best = clamped;
+    bestVal.textContent = Math.round(best);
+    bestBadge.style.display = 'block';
+  }
+
+  const g = gradeFor(clamped);
+  gradeText.textContent = g.title;
+  gradeSub.textContent = g.sub;
+  retryMeasureBtn.style.display = 'inline-block';
+}
+
+async function detectLoop(){
+  const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
+  async function tick(){
+    try{
+      const result = await faceapi.detectSingleFace(video, options).withFaceExpressions();
+      if (result && result.expressions){
+        const happy = result.expressions.happy || 0;
+        const target = happy * 100;
+        rawSmoothed = rawSmoothed + (target - rawSmoothed) * 0.3;
+      } else {
+        rawSmoothed = rawSmoothed * 0.9;
+      }
+
+      // Live preview of the gauge only while actively counting down,
+      // so the "start" and "result" screens stay calm and readable.
+      if (phase === 'counting'){
+        renderGauge(toDisplayScore(rawSmoothed));
+      }
+    }catch(e){ /* keep looping even if a frame fails */ }
+    requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+document.getElementById('retryBtn').addEventListener('click', startCamera);
+startBtn.addEventListener('click', startCountdown);
+retryMeasureBtn.addEventListener('click', goToReady);
+startCamera();
+</script>
+</body>
+</html>
